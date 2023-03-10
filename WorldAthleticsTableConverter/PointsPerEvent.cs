@@ -5,8 +5,8 @@ namespace WorldAthleticsTableConverter;
 public class PointsPerEvent
 {
     public int Points { get; set; }
-    public Gender Gender { get; set; }
-    public Category Category { get; set; }
+    public string Gender { get; set; }
+    public string Category { get; set; }
     public string Event { get; set; }
     public decimal Mark { get; set; }
 }
@@ -39,14 +39,3 @@ public static class JsonFileUtils
     }
 }
 
-public enum Category
-{
-    indoor,
-    outdoor
-}
-
-public enum Gender
-{
-    male,
-    female
-}

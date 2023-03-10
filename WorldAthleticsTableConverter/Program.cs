@@ -21,7 +21,7 @@ public static class Main
             using PdfDocument document = PdfDocument.Open(@"C:\Users\jkdsa\source\repos\WorldAthleticsTableConverter\WorldAthleticsTableConverter\PointsTable.pdf");
             foreach (var page in document.GetPages())
             {
-                Gender gender = new();
+                string gender = "";
                 int index = 0;
                 List<string> eventNameList = new();
                 var wordsList = page.GetWords().GroupBy(row => row.BoundingBox.Bottom);
@@ -34,8 +34,11 @@ public static class Main
                 {
                     List<PointsPerEvent> events = new();
                     var textRow = row.Select(x => x.Text).ToList();
-
-                    if (index == 0) gender = row.ElementAt(index).Text.ToLower() == "men’s" ? Gender.male : Gender.female;
+                    if (index == 0)
+                    {
+                        var firstWord = row.ElementAt(index).Text.ToLower();
+                        gender = (firstWord == "men’s" || firstWord == "men") ? "male" : "female";
+                    }
 
                     else if (index == 1)//Get the header
                     {
@@ -45,10 +48,11 @@ public static class Main
                         textRow.Remove("Points");
                         eventNameList = textRow;
                     }
-                    else PointsTable.AddRange(await Task.Run(() => ProcessRow(textRow, eventNameList, gender, rowDirection)));
-
+                    else 
+                        PointsTable.AddRange(await Task.Run(() => ProcessRow(textRow, eventNameList, gender, rowDirection)));
                     index++;
                 }
+
             }
         }
         catch (Exception)
@@ -61,7 +65,8 @@ public static class Main
         await WriteToJSON();
     }
 
-    private static Task<List<PointsPerEvent>> ProcessRow(List<string> row, List<string> eventNameList, Gender gender, bool tableDirection)
+
+    private static Task<List<PointsPerEvent>> ProcessRow(List<string> row, List<string> eventNameList, string gender, bool tableDirection)
     {
         int index = 0;
         List<PointsPerEvent> events = new();
@@ -83,9 +88,9 @@ public static class Main
                         Points = pointsPerRow
                     };
 
-                    newEvent.Category = Events.IndoorEvents.Contains(newEvent.Event) ? Category.indoor : Category.outdoor;
+                    newEvent.Category = Events.IndoorEvents.Contains(newEvent.Event) ? "indoor" : "outdoor";
 
-                    if(newEvent.Mark != 0)
+                    if (newEvent.Mark != 0)
                         events.Add(newEvent);
                 }
                 index++;
@@ -105,7 +110,7 @@ public static class Main
                     Points = pointsPerRow
                 };
 
-                newEvent.Category = Events.IndoorEvents.Contains(newEvent.Event) ? Category.indoor : Category.outdoor;
+                newEvent.Category = Events.IndoorEvents.Contains(newEvent.Event) ? "indoor" : "outdoor";
 
                 if (newEvent.Mark != 0)
                     events.Add(newEvent);
