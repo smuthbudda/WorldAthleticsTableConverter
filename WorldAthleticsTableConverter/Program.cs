@@ -4,7 +4,7 @@ using UglyToad.PdfPig;
 using WorldAthleticsTableConverter;
 
 await Main.ParsePDF();
-
+//todo fix the pager at the bottom.
 public static class Main
 {
 
@@ -37,7 +37,11 @@ public static class Main
                     if (index == 0)
                     {
                         var firstWord = row.ElementAt(index).Text.ToLower();
-                        gender = (firstWord == "men’s" || firstWord == "men") ? "male" : "female";
+                        if (firstWord.Contains("women"))
+                        {
+
+                        }
+                        gender = !firstWord.Contains("women") ? "male" : "female";
                     }
 
                     else if (index == 1)//Get the header
@@ -48,7 +52,7 @@ public static class Main
                         textRow.Remove("Points");
                         eventNameList = textRow;
                     }
-                    else 
+                    else
                         PointsTable.AddRange(await Task.Run(() => ProcessRow(textRow, eventNameList, gender, rowDirection)));
                     index++;
                 }
@@ -59,9 +63,11 @@ public static class Main
         {
             throw;
         }
-        PointsTable = PointsTable.OrderByDescending(x => x.Points).ToList();
+
         stopWatch.Stop();
-        Console.WriteLine($"Done time elapsed {stopWatch.Elapsed}");
+        PointsTable = PointsTable.OrderBy(x => x.Gender).ToList();
+        PointsTable = PointsTable.OrderBy(x => x.Gender).ToList();
+        Console.WriteLine($"Done time elapsed {stopWatch.Elapsed} Count: {PointsTable.Count}");
         await WriteToJSON();
     }
 
@@ -72,6 +78,10 @@ public static class Main
         List<PointsPerEvent> events = new();
         int pointsPerRow = 0;
         var last = row.Last();
+        if (row.Count < 3)
+        {
+            return Task.FromResult(events);
+        }
         foreach (var word in row)
         {
             if (tableDirection)
@@ -93,7 +103,6 @@ public static class Main
                     if (newEvent.Mark != 0)
                         events.Add(newEvent);
                 }
-                index++;
             }
             else
             {
@@ -104,19 +113,20 @@ public static class Main
 
                 PointsPerEvent newEvent = new()
                 {
-                    Event = eventNameList.ElementAt(0),
                     Gender = gender,
                     Mark = ConvertTimeToInt(word),
                     Points = pointsPerRow
                 };
+
+                newEvent.Event = eventNameList.ElementAt(1);
 
                 newEvent.Category = Events.IndoorEvents.Contains(newEvent.Event) ? "indoor" : "outdoor";
 
                 if (newEvent.Mark != 0)
                     events.Add(newEvent);
 
-                index++;
             }
+            index++;
         }
         return Task.FromResult(events);
     }
@@ -128,16 +138,16 @@ public static class Main
         return Task.CompletedTask;
     }
 
-    private static decimal ConvertTimeToInt(string input)
+    private static double ConvertTimeToInt(string input)
     {
         var yuh = input.Split(':');
 
         if (input == "-" || input == " ")
             return 0;
 
-        decimal seconds = Convert.ToDecimal(yuh.Last());
-        decimal minutes = yuh.Length == 2 ? Convert.ToDecimal(yuh.ElementAt(0)) * 60 : 0;
-        decimal hours = yuh.Length == 3 ? Convert.ToDecimal(yuh.ElementAt(1)) * 60 * 60 : 0;
+        double seconds = Convert.ToDouble(yuh.Last());
+        double minutes = yuh.Length == 2 ? Convert.ToDouble(yuh.ElementAt(0)) * 60 : 0;
+        double hours = yuh.Length == 3 ? Convert.ToDouble(yuh.ElementAt(1)) * 60 * 60 : 0;
 
         return minutes + seconds + hours;
     }

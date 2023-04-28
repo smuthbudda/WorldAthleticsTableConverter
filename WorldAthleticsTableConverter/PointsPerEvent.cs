@@ -1,4 +1,6 @@
 ﻿using Newtonsoft.Json;
+using System;
+using UglyToad.PdfPig.Content;
 
 namespace WorldAthleticsTableConverter;
 
@@ -8,7 +10,14 @@ public class PointsPerEvent
     public string Gender { get; set; }
     public string Category { get; set; }
     public string Event { get; set; }
-    public decimal Mark { get; set; }
+    public double Mark { get; set; }
+    public TimeSpan MarkTime
+    {
+        get
+        {
+            return TimeSpan.FromSeconds(Mark);
+        }
+    }
 }
 
 static class Events
