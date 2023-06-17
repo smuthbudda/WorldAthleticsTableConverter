@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using EmptyFiles;
+using System.Diagnostics;
 using System.Reflection.Metadata;
 using UglyToad.PdfPig;
 
@@ -7,10 +8,12 @@ namespace WorldAthleticsTableConverter;
 public class ReadTable
 {
     public string FilePath { get; set; }
+    public string Category { get; set; }
 
-    public ReadTable(string filePath)
+    public ReadTable(string filePath, string _category)
     {
         FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
+        Category = _category;
     }
 
 
@@ -40,8 +43,8 @@ public class ReadTable
                 foreach (var row in wordsList)
                 {
                     List<PointsPerEvent> events = new();
-                    var textRow = row.Select(x => x.Text).ToList();
-
+                    var textRow = row.Select(x => x.Text.Replace(" ", "")).ToList();
+                    string points;
                     if (index == 0) //Read the header
                     {
                         var firstWord = row.ElementAt(index).Text.ToLower();
@@ -52,21 +55,38 @@ public class ReadTable
                         var pointsIndex = textRow.IndexOf("Points");
 
                         if (pointsIndex == 0)
+                        {
                             rowDirection = true;
+                        }
 
                         textRow.Remove("Points");
+                        textRow.Remove("Miles");
                         eventNameList = textRow;
                     }
-                    else //Process the events
+                    else
                     {
-                        PointsTable.AddRange(ProcessRow(textRow, eventNameList, gender, rowDirection));
-                    }
+                        if (rowDirection) //if right remove the last item.
+                        {
+                            points = textRow.ElementAt(0);
+                            textRow.RemoveAt(0);
+                        }
+                        else//if right remove the first item.
+                        {
+                            points = textRow.ElementAt(textRow.Count - 1);
+                            textRow.RemoveAt(textRow.Count - 1);
+                        }
+                        if (PointsTable.Count == 300)
+                        {
 
+                        }
+                        PointsTable.AddRange(ProcessRow(textRow, eventNameList, gender, points));
+                    }
                     index++;
                 }
 
             }
             document.Dispose(); //This is unneeded as it is already called when the using is in scope. 
+            PointsTable = FixObjects(PointsTable);
             return PointsTable;
         }
         catch (Exception ex)
@@ -78,69 +98,64 @@ public class ReadTable
     }
 
 
-    private List<PointsPerEvent> ProcessRow(List<string> row, List<string> eventNameList, string gender, bool tableDirection)
+    private List<PointsPerEvent> ProcessRow(List<string> row, List<string> eventNameList, string gender, string points)
     {
-        int index = 0;
-        List<PointsPerEvent> events = new();
-        int pointsPerRow = 0;
-        var last = row.Last();
-        if (row.Count < 3)
+        try
         {
+            int index = 0;
+            List<PointsPerEvent> events = new();
+            if (row.Count < 3)
+            {
+                return events;
+            }
+
+            Parallel.ForEach(row, word =>
+               {
+                   PointsPerEvent newEvent = new()
+                   {
+                       Gender = gender,
+                       Category = this.Category,
+                       Points = int.Parse(points),
+                       Event = eventNameList[index],
+                       Mark = ConvertTimeToInt(word),
+                   };
+                   events.Add(newEvent);
+                   index++;
+               }
+            );
+
             return events;
         }
-        foreach (var word in row)
+        catch (Exception ex)
         {
-            //this could probably be shortend and simplified 
-            if (tableDirection)
-            {
-                if (index == 0)
-                    pointsPerRow = int.Parse(word);
-                else
-                {
-                    PointsPerEvent newEvent = new()
-                    {
-                        Event = eventNameList.ElementAt(index - 1),
-                        Gender = gender,
-                        Mark = ConvertTimeToInt(word),
-                        Points = pointsPerRow
-                    };
-
-                    if (newEvent.Event == "Pentathlon")
-                    {
-                        Console.WriteLine($"Pent : { newEvent.Points}{newEvent.Gender}");
-                    }
-                    newEvent.Category = Events.IndoorEvents.Contains(newEvent.Event) ? "indoor" : "outdoor";
-
-                    if (newEvent.Mark != 0)
-                        events.Add(newEvent);
-                }
-            }
-            else
-            {
-                if (word == last)
-                    pointsPerRow = int.Parse(word);
-                else
-                    pointsPerRow = int.Parse(last);
-
-                PointsPerEvent newEvent = new()
-                {
-                    Gender = gender,
-                    Mark = ConvertTimeToInt(word),
-                    Points = pointsPerRow
-                };
-
-                newEvent.Event = eventNameList.ElementAt(1);
-                newEvent.Category = Events.IndoorEvents.Contains(newEvent.Event) ? "indoor" : "outdoor";
-
-                if (newEvent.Mark != 0)
-                    events.Add(newEvent);
-
-            }
-            index++;
+            Console.WriteLine("", ex);
+            throw;
         }
-        return events;
     }
 
+
+    private List<PointsPerEvent> FixObjects(List<PointsPerEvent> events)
+    {
+        Parallel.ForEach(events, e =>
+        {
+
+            if (e.Mark == 0)
+            {
+                var closest = events
+                    .Where(x =>
+                        x.Event == e.Event &&
+                        x.Mark != 0 &&
+                        e.Gender == x.Gender &&
+                        x.Category == e.Category)
+                    .OrderBy(v => Math.Abs(v.Points - e.Points))
+                    .First();
+                e.Mark = closest.Mark;
+            }
+        }
+        );
+
+        return events;
+    }
 
     private double ConvertTimeToInt(string input)
     {

@@ -12,8 +12,8 @@ public static class Main
 {
     public static void ReadWithOtherPDFParser()
     {
-        ReadTable reader = new(@"C:\Users\jkdsa\source\repos\WorldAthleticsTableConverter\WorldAthleticsTableConverter\PointsTable.pdf");
-        ReadTable newReader = new(@"C:\Users\jkdsa\source\repos\WorldAthleticsTableConverter\WorldAthleticsTableConverter\IndoorTable.pdf");
+        ReadTable reader = new(@"C:\Users\jkdsa\source\repos\WorldAthleticsTableConverter\WorldAthleticsTableConverter\PointsTable.pdf", "Outdoor");
+        ReadTable newReader = new(@"C:\Users\jkdsa\source\repos\WorldAthleticsTableConverter\WorldAthleticsTableConverter\IndoorTable.pdf", "Indoor");
         Stopwatch stopWatch = new();
         stopWatch.Start();
         var indoor = newReader.ParsePDF();
